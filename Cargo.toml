@@ -4,3 +4,5 @@ version = "0.0.1"
 edition = "2018"
 
 [dependencies]
+fastcgi = "1.0.0"
+http = "0.2.1"
