@@ -2,11 +2,11 @@ extern crate http;
 
 use http::{Response, StatusCode};
 
-use fcgi_rs;
+use fcgi;
 
 
 fn main() {
-    fcgi_rs::run(|req| {
+    fcgi::run(|req| {
         let resp = Response::builder()
             .status(StatusCode::OK)
             .body(())
