@@ -1,7 +1,7 @@
 extern crate fastcgi;
 extern crate http;
 
-use std::io::Write;
+use std::io::{BufReader, Write};
 
 use http::{Request, Response};
 use http::request;
@@ -59,7 +59,13 @@ impl From<fastcgi::Request> for http::request::Builder {
             http_request = http_request.header(&k, &v);
         }
 
+        // TODO: Add request body
+
         http_request
+
+        // let body = BufReader::new(request.stdin());
+        //
+        // http_request.body(body)
 
         // HTTP_* params become headers
     }
