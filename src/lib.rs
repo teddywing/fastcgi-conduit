@@ -32,3 +32,27 @@ where F: Fn(Request<()>) -> Response<T> + Send + Sync + 'static
             .unwrap_or(());
     });
 }
+
+trait From<T>: Sized {
+    fn from(_: T) -> Self;
+}
+
+impl From<fastcgi::Request> for http::request::Builder {
+    fn from(request: fastcgi::Request) -> Self {
+        let method = request.param("REQUEST_METHOD")
+            .unwrap_or("".to_owned());
+
+        let uri = format!(
+            "{}://{}{}",
+            request.param("REQUEST_SCHEME").unwrap_or("".to_owned()),
+            request.param("HTTP_HOST").unwrap_or("".to_owned()),
+            request.param("REQUEST_URI").unwrap_or("".to_owned()),
+        );
+
+        return http::request::Builder::new()
+            .method(&*method)
+            .uri(&uri)
+
+        // HTTP_* params become headers
+    }
+}
