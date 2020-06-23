@@ -12,13 +12,9 @@ pub fn run<F, T>(handler: F)
 where F: Fn(Request<()>) -> Response<T> + Send + Sync + 'static
 {
     fastcgi::run(move |mut req| {
-        // build request
-        let r = request::Builder::new()
-            .method("GET")
-            .body(())
-            .unwrap();
+        let r: http::request::Builder = From::from(&req);
 
-        handler(r);
+        handler(r.body(()).unwrap());
 
         let params = req.params()
             .map(|(k, v)| k + ": " + &v)
@@ -38,8 +34,8 @@ trait From<T>: Sized {
     fn from(_: T) -> Self;
 }
 
-impl From<fastcgi::Request> for http::request::Builder {
-    fn from(request: fastcgi::Request) -> Self {
+impl From<&fastcgi::Request> for http::request::Builder {
+    fn from(request: &fastcgi::Request) -> Self {
         let method = request.param("REQUEST_METHOD")
             .unwrap_or("".to_owned());
 
