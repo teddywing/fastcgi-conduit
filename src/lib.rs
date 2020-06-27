@@ -134,20 +134,20 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        self.scheme()
    }
 
-   fn host<'b>(&'b self) -> conduit::Host<'b> {
+   fn host(&self) -> conduit::Host<'_> {
        conduit::Host::Name(&self.host)
    }
 
-   fn virtual_root<'b>(&'b self) -> std::option::Option<&'b str> { todo!() }
+   fn virtual_root(&self) -> std::option::Option<&str> { todo!() }
 
-   fn path<'b>(&'b self) -> &'b str { todo!() }
-   fn query_string<'b>(&'b self) -> std::option::Option<&'b str> { todo!() }
-   fn remote_addr<'b>(&self) -> std::net::SocketAddr { todo!() }
-   fn content_length<'b>(&self) -> std::option::Option<u64> { todo!() }
-   fn headers<'b>(&self) -> &conduit::HeaderMap { todo!() }
-   fn body<'b>(&'b mut self) -> &'b mut (dyn std::io::Read + 'b) { todo!() }
-   fn extensions<'b>(&'b self) -> &'b conduit::TypeMap { todo!() }
-   fn mut_extensions<'b>(&'b mut self) -> &'b mut conduit::TypeMap { todo!() }
+   fn path(&self) -> &str { todo!() }
+   fn query_string(&self) -> std::option::Option<&str> { todo!() }
+   fn remote_addr(&self) -> std::net::SocketAddr { todo!() }
+   fn content_length(&self) -> std::option::Option<u64> { todo!() }
+   fn headers(&self) -> &conduit::HeaderMap { todo!() }
+   fn body(&mut self) -> &mut (dyn std::io::Read) { todo!() }
+   fn extensions(&self) -> &conduit::TypeMap { todo!() }
+   fn mut_extensions(&mut self) -> &mut conduit::TypeMap { todo!() }
 }
 
 
