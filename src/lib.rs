@@ -29,6 +29,7 @@ pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
 
 struct FastCgiRequest<'a> {
     request: &'a fastcgi::Request,
+    http_version: conduit::Version,
     method: conduit::Method,
     headers: conduit::HeaderMap,
 }
@@ -42,11 +43,23 @@ impl<'a> FastCgiRequest<'a> {
 
         let r = Self {
             request: request,
+            http_version: Self::version(&request),
             method: method,
             headers: headers,
         };
 
         Ok(r)
+    }
+
+    fn version(request: &'a fastcgi::Request) -> conduit::Version {
+        match request.param("SERVER_PROTOCOL").unwrap_or_default().as_str() {
+            "HTTP/0.9" => conduit::Version::HTTP_09,
+            "HTTP/1.0" => conduit::Version::HTTP_10,
+            "HTTP/1.1" => conduit::Version::HTTP_11,
+            "HTTP/2.0" => conduit::Version::HTTP_2,
+            "HTTP/3.0" => conduit::Version::HTTP_3,
+            _ => conduit::Version::default(),
+        }
     }
 
     fn method(
