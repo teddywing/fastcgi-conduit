@@ -33,6 +33,7 @@ struct FastCgiRequest<'a> {
     host: String,
     method: conduit::Method,
     headers: conduit::HeaderMap,
+    path: String,
 }
 
 impl<'a> FastCgiRequest<'a> {
@@ -48,6 +49,7 @@ impl<'a> FastCgiRequest<'a> {
             host: Self::host(&request),
             method: method,
             headers: headers,
+            path: Self::path(&request),
         };
 
         Ok(r)
@@ -119,6 +121,13 @@ impl<'a> FastCgiRequest<'a> {
             })
             .collect()
     }
+
+    fn path(request: &'a fastcgi::Request) -> String {
+        match request.param("SCRIPT_NAME") {
+            Some(p) => p,
+            None => "/".to_owned(),
+        }
+    }
 }
 
 impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
@@ -142,7 +151,10 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        None
    }
 
-   fn path(&self) -> &str { todo!() }
+   fn path(&self) -> &str {
+       &self.path
+   }
+
    fn query_string(&self) -> std::option::Option<&str> { todo!() }
    fn remote_addr(&self) -> std::net::SocketAddr { todo!() }
    fn content_length(&self) -> std::option::Option<u64> { todo!() }
