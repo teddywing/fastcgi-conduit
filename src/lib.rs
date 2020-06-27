@@ -16,6 +16,12 @@ use snafu::{ResultExt, Snafu};
 pub enum RequestError {
     #[snafu(display("{}", source))]
     InvalidMethod { source: http::method::InvalidMethod },
+
+    #[snafu(display("{}", source))]
+    InvalidHeaderName { source: conduit::header::InvalidHeaderName },
+
+    #[snafu(display("{}", source))]
+    InvalidHeaderValue { source: conduit::header::InvalidHeaderValue },
 }
 
 pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
@@ -24,6 +30,7 @@ pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
 struct FastCgiRequest<'a> {
     request: &'a fastcgi::Request,
     method: conduit::Method,
+    headers: conduit::HeaderMap,
 }
 
 impl<'a> FastCgiRequest<'a> {
@@ -31,18 +38,15 @@ impl<'a> FastCgiRequest<'a> {
         let method = Self::method(request)
             .context(InvalidMethod)?;
 
+        let headers = Self::headers(request.params())?;
+
         let r = Self {
             request: request,
             method: method,
+            headers: headers,
         };
 
-        r.parse();
-
         Ok(r)
-    }
-
-    fn parse(&self) {
-        let headers = Self::headers_from_params(self.request.params());
     }
 
     fn method(
@@ -53,6 +57,25 @@ impl<'a> FastCgiRequest<'a> {
                 .unwrap_or_default()
                 .as_bytes()
         )
+    }
+
+    fn headers(params: fastcgi::Params) -> RequestResult<conduit::HeaderMap> {
+        let mut map = conduit::HeaderMap::new();
+        let headers = Self::headers_from_params(params);
+
+        for (name, value) in headers
+            .iter()
+            .map(|(name, value)| (name.as_bytes(), value.as_bytes()))
+        {
+            map.append(
+                conduit::header::HeaderName::from_bytes(name)
+                    .context(InvalidHeaderName)?,
+                conduit::header::HeaderValue::from_bytes(value)
+                    .context(InvalidHeaderValue)?,
+            );
+        }
+
+        Ok(map)
     }
 
     fn headers_from_params(params: fastcgi::Params) -> Vec<(String, String)> {
