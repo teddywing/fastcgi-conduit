@@ -30,6 +30,7 @@ pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
 struct FastCgiRequest<'a> {
     request: &'a fastcgi::Request,
     http_version: conduit::Version,
+    host: String,
     method: conduit::Method,
     headers: conduit::HeaderMap,
 }
@@ -44,6 +45,7 @@ impl<'a> FastCgiRequest<'a> {
         let r = Self {
             request: request,
             http_version: Self::version(&request),
+            host: Self::host(&request),
             method: method,
             headers: headers,
         };
@@ -59,6 +61,10 @@ impl<'a> FastCgiRequest<'a> {
         } else {
             conduit::Scheme::Http
         }
+    }
+
+    fn host(request: &'a fastcgi::Request) -> String {
+        request.param("HTTP_HOST").unwrap_or_default()
     }
 
     fn version(request: &'a fastcgi::Request) -> conduit::Version {
