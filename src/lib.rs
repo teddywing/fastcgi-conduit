@@ -121,23 +121,34 @@ impl<'a> FastCgiRequest<'a> {
     }
 }
 
-// impl<'a> conduit::RequestExt for FastCgiRequest {
-//    fn http_version(&self) -> conduit::Version { todo!() }
-//    fn method(&self) -> &conduit::Method {
-//        self.method
-//    }
-//    fn scheme(&self) -> conduit::Scheme { todo!() }
-//    fn host(&'a self) -> conduit::Host<'a> { todo!() }
-//    fn virtual_root(&'a self) -> std::option::Option<&'a str> { todo!() }
-//    fn path(&'a self) -> &'a str { todo!() }
-//    fn query_string(&'a self) -> std::option::Option<&'a str> { todo!() }
-//    fn remote_addr(&self) -> std::net::SocketAddr { todo!() }
-//    fn content_length(&self) -> std::option::Option<u64> { todo!() }
-//    fn headers(&self) -> &conduit::HeaderMap { todo!() }
-//    fn body(&'a mut self) -> &'a mut (dyn std::io::Read + 'a) { todo!() }
-//    fn extensions(&'a self) -> &'a conduit::TypeMap { todo!() }
-//    fn mut_extensions(&'a mut self) -> &'a mut conduit::TypeMap { todo!() }
-// }
+impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
+   fn http_version(&self) -> conduit::Version {
+       self.http_version
+   }
+
+   fn method(&self) -> &conduit::Method {
+       &self.method
+   }
+
+   fn scheme(&self) -> conduit::Scheme {
+       self.scheme()
+   }
+
+   fn host<'b>(&'b self) -> conduit::Host<'b> {
+       conduit::Host::Name(&self.host)
+   }
+
+   fn virtual_root<'b>(&'b self) -> std::option::Option<&'b str> { todo!() }
+
+   fn path<'b>(&'b self) -> &'b str { todo!() }
+   fn query_string<'b>(&'b self) -> std::option::Option<&'b str> { todo!() }
+   fn remote_addr<'b>(&self) -> std::net::SocketAddr { todo!() }
+   fn content_length<'b>(&self) -> std::option::Option<u64> { todo!() }
+   fn headers<'b>(&self) -> &conduit::HeaderMap { todo!() }
+   fn body<'b>(&'b mut self) -> &'b mut (dyn std::io::Read + 'b) { todo!() }
+   fn extensions<'b>(&'b self) -> &'b conduit::TypeMap { todo!() }
+   fn mut_extensions<'b>(&'b mut self) -> &'b mut conduit::TypeMap { todo!() }
+}
 
 
 struct Server;
