@@ -213,7 +213,10 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        self.content_length
    }
 
-   fn headers(&self) -> &conduit::HeaderMap { todo!() }
+   fn headers(&self) -> &conduit::HeaderMap {
+       &self.headers
+   }
+
    fn body(&mut self) -> &mut (dyn std::io::Read) { todo!() }
    fn extensions(&self) -> &conduit::TypeMap { todo!() }
    fn mut_extensions(&mut self) -> &mut conduit::TypeMap { todo!() }
