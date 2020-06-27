@@ -34,6 +34,7 @@ struct FastCgiRequest<'a> {
     method: conduit::Method,
     headers: conduit::HeaderMap,
     path: String,
+    query: Option<String>,
 }
 
 impl<'a> FastCgiRequest<'a> {
@@ -50,6 +51,7 @@ impl<'a> FastCgiRequest<'a> {
             method: method,
             headers: headers,
             path: Self::path(&request),
+            query: Self::query(&request),
         };
 
         Ok(r)
@@ -128,6 +130,10 @@ impl<'a> FastCgiRequest<'a> {
             None => "/".to_owned(),
         }
     }
+
+    fn query(request: &'a fastcgi::Request) -> Option<String> {
+        request.param("QUERY_STRING")
+    }
 }
 
 impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
@@ -155,7 +161,11 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        &self.path
    }
 
-   fn query_string(&self) -> std::option::Option<&str> { todo!() }
+   fn query_string(&self) -> std::option::Option<&str> {
+       self.query.as_ref()
+           .map(|p| p.as_str())
+   }
+
    fn remote_addr(&self) -> std::net::SocketAddr { todo!() }
    fn content_length(&self) -> std::option::Option<u64> { todo!() }
    fn headers(&self) -> &conduit::HeaderMap { todo!() }
