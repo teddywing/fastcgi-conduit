@@ -4,6 +4,7 @@ extern crate http;
 
 use std::io;
 use std::io::{BufReader, Write};
+use std::net::SocketAddr;
 
 use conduit::Handler;
 
@@ -22,9 +23,27 @@ pub enum RequestError {
 
     #[snafu(display("{}", source))]
     InvalidHeaderValue { source: conduit::header::InvalidHeaderValue },
+
+    #[snafu(display("{}", source))]
+    InvalidRemoteAddr { source: RemoteAddrError },
 }
 
 pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
+
+#[derive(Debug, Snafu)]
+pub enum RemoteAddrError {
+    #[snafu(display("Could not parse address {}: {}", address, source))]
+    AddrParseError {
+        address: String,
+        source: std::net::AddrParseError,
+    },
+
+    #[snafu(display("Could not parse port {}: {}", port, source))]
+    PortParseError {
+        port: String,
+        source: std::num::ParseIntError
+    },
+}
 
 
 struct FastCgiRequest<'a> {
@@ -35,6 +54,7 @@ struct FastCgiRequest<'a> {
     headers: conduit::HeaderMap,
     path: String,
     query: Option<String>,
+    remote_addr: SocketAddr,
 }
 
 impl<'a> FastCgiRequest<'a> {
@@ -52,6 +72,7 @@ impl<'a> FastCgiRequest<'a> {
             headers: headers,
             path: Self::path(&request),
             query: Self::query(&request),
+            remote_addr: Self::remote_addr(&request).context(InvalidRemoteAddr)?,
         };
 
         Ok(r)
@@ -134,6 +155,18 @@ impl<'a> FastCgiRequest<'a> {
     fn query(request: &'a fastcgi::Request) -> Option<String> {
         request.param("QUERY_STRING")
     }
+
+    fn remote_addr(request: &'a fastcgi::Request) -> Result<SocketAddr, RemoteAddrError> {
+        let addr = request.param("REMOTE_ADDR").unwrap_or_default();
+        let port = request.param("REMOTE_PORT").unwrap_or_default();
+
+        Ok(
+            SocketAddr::new(
+                addr.parse().context(AddrParseError { address: addr })?,
+                port.parse().context(PortParseError { port })?,
+            )
+        )
+    }
 }
 
 impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
@@ -166,7 +199,10 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
            .map(|p| p.as_str())
    }
 
-   fn remote_addr(&self) -> std::net::SocketAddr { todo!() }
+   fn remote_addr(&self) -> std::net::SocketAddr {
+       self.remote_addr
+   }
+
    fn content_length(&self) -> std::option::Option<u64> { todo!() }
    fn headers(&self) -> &conduit::HeaderMap { todo!() }
    fn body(&mut self) -> &mut (dyn std::io::Read) { todo!() }
