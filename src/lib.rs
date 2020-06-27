@@ -138,7 +138,9 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        conduit::Host::Name(&self.host)
    }
 
-   fn virtual_root(&self) -> std::option::Option<&str> { todo!() }
+   fn virtual_root(&self) -> std::option::Option<&str> {
+       None
+   }
 
    fn path(&self) -> &str { todo!() }
    fn query_string(&self) -> std::option::Option<&str> { todo!() }
