@@ -1,84 +1,97 @@
+extern crate conduit;
 extern crate fastcgi;
 extern crate http;
 
+use std::io;
 use std::io::{BufReader, Write};
 
-use http::{Request, Response};
-use http::request;
+use conduit::Handler;
+
 use inflector::cases::traincase::to_train_case;
 
+use snafu::{ResultExt, Snafu};
 
-pub fn run<F, T>(handler: F)
-where F: Fn(Request<()>) -> Response<T> + Send + Sync + 'static
-{
-    fastcgi::run(move |mut req| {
-        let r: http::request::Builder = From::from(&req);
 
-        handler(r.body(()).unwrap());
+#[derive(Debug, Snafu)]
+pub enum RequestError {
+    #[snafu(display("{}", source))]
+    InvalidMethod { source: http::method::InvalidMethod },
+}
 
-        let params = req.params()
-            .map(|(k, v)| k + ": " + &v)
-            .collect::<Vec<String>>()
-            .join("\n");
+pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
 
-        write!(
-            &mut req.stdout(),
-            "Content-Type: text/plain\n\n{}",
-            params
+
+struct FastCgiRequest<'a> {
+    request: &'a fastcgi::Request,
+    method: conduit::Method,
+}
+
+impl<'a> FastCgiRequest<'a> {
+    pub fn new(request: &'a fastcgi::Request) -> RequestResult<Self> {
+        let method = Self::method(request)
+            .context(InvalidMethod)?;
+
+        let r = Self {
+            request: request,
+            method: method,
+        };
+
+        r.parse();
+
+        Ok(r)
+    }
+
+    fn parse(&self) {
+        let headers = Self::headers_from_params(self.request.params());
+    }
+
+    fn method(
+        request: &'a fastcgi::Request
+    ) -> Result<conduit::Method, http::method::InvalidMethod> {
+        conduit::Method::from_bytes(
+            request.param("REQUEST_METHOD")
+                .unwrap_or_default()
+                .as_bytes()
         )
-            .unwrap_or(());
-    });
-}
+    }
 
-trait From<T>: Sized {
-    fn from(_: T) -> Self;
-}
+    fn headers_from_params(params: fastcgi::Params) -> Vec<(String, String)> {
+        return params
+            .filter(|(key, _)| key.starts_with("HTTP_"))
+            .map(|(key, value)| {
+                let key = key.get(5..).unwrap_or_default();
+                let key = &key.replace("_", "-");
+                let key = &to_train_case(&key);
 
-impl From<&fastcgi::Request> for http::request::Builder {
-    fn from(request: &fastcgi::Request) -> Self {
-        let method = request.param("REQUEST_METHOD")
-            .unwrap_or("".to_owned());
-
-        let uri = format!(
-            "{}://{}{}",
-            request.param("REQUEST_SCHEME").unwrap_or("".to_owned()),
-            request.param("HTTP_HOST").unwrap_or("".to_owned()),
-            request.param("REQUEST_URI").unwrap_or("".to_owned()),
-        );
-
-        let mut http_request = http::request::Builder::new()
-            .method(&*method)
-            .uri(&uri);
-
-        let headers = headers_from_params(request.params());
-        for (k, v) in headers {
-            http_request = http_request.header(&k, &v);
-        }
-
-        // TODO: Add request body
-
-        http_request
-
-        // let body = BufReader::new(request.stdin());
-        //
-        // http_request.body(body)
-
-        // HTTP_* params become headers
+                (key.to_owned(), value)
+            })
+            .collect()
     }
 }
 
-fn headers_from_params(params: fastcgi::Params) -> Vec<(String, String)> {
-    return params
-        .filter(|(key, _)| key.starts_with("HTTP_"))
-        .map(|(key, value)| {
-            let mut key = key.get(5..).unwrap_or("").to_owned();
-            key = key.replace("_", "-");
-            key = to_train_case(&key);
+// impl<'a> conduit::RequestExt for FastCgiRequest {
+//    fn http_version(&self) -> conduit::Version { todo!() }
+//    fn method(&self) -> &conduit::Method {
+//        self.method
+//    }
+//    fn scheme(&self) -> conduit::Scheme { todo!() }
+//    fn host(&'a self) -> conduit::Host<'a> { todo!() }
+//    fn virtual_root(&'a self) -> std::option::Option<&'a str> { todo!() }
+//    fn path(&'a self) -> &'a str { todo!() }
+//    fn query_string(&'a self) -> std::option::Option<&'a str> { todo!() }
+//    fn remote_addr(&self) -> std::net::SocketAddr { todo!() }
+//    fn content_length(&self) -> std::option::Option<u64> { todo!() }
+//    fn headers(&self) -> &conduit::HeaderMap { todo!() }
+//    fn body(&'a mut self) -> &'a mut (dyn std::io::Read + 'a) { todo!() }
+//    fn extensions(&'a self) -> &'a conduit::TypeMap { todo!() }
+//    fn mut_extensions(&'a mut self) -> &'a mut conduit::TypeMap { todo!() }
+// }
 
-            // Change _ to -
-            // Uppercase each word
 
-            (key, value)
-        })
-        .collect()
+struct Server;
+
+impl Server {
+    pub fn start<H: Handler + 'static + Sync>(handler: H) -> io::Result<Server> {
+        Ok(Server{})
+    }
 }
