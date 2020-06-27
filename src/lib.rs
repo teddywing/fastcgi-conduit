@@ -51,6 +51,16 @@ impl<'a> FastCgiRequest<'a> {
         Ok(r)
     }
 
+    pub fn scheme(&self) -> conduit::Scheme {
+        let scheme = self.request.param("REQUEST_SCHEME").unwrap_or_default();
+
+        if scheme == "https" {
+            conduit::Scheme::Https
+        } else {
+            conduit::Scheme::Http
+        }
+    }
+
     fn version(request: &'a fastcgi::Request) -> conduit::Version {
         match request.param("SERVER_PROTOCOL").unwrap_or_default().as_str() {
             "HTTP/0.9" => conduit::Version::HTTP_09,
