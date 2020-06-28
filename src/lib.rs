@@ -96,10 +96,6 @@ impl<'a> FastCgiRequest<'a> {
         }
     }
 
-    fn host(request: &fastcgi::Request) -> String {
-        request.param("HTTP_HOST").unwrap_or_default()
-    }
-
     fn version(request: &fastcgi::Request) -> conduit::Version {
         match request.param("SERVER_PROTOCOL").unwrap_or_default().as_str() {
             "HTTP/0.9" => conduit::Version::HTTP_09,
@@ -109,6 +105,10 @@ impl<'a> FastCgiRequest<'a> {
             "HTTP/3.0" => conduit::Version::HTTP_3,
             _ => conduit::Version::default(),
         }
+    }
+
+    fn host(request: &fastcgi::Request) -> String {
+        request.param("HTTP_HOST").unwrap_or_default()
     }
 
     fn method(
