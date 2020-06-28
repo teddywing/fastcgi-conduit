@@ -253,6 +253,13 @@ impl Server {
 
             let (head, body) = response.unwrap().into_parts();
 
+            write!(
+                &mut stdout,
+                "HTTP/1.1 {} {}\r\n",
+                head.status.as_str(),
+                head.status.canonical_reason().unwrap_or("UNKNOWN"),
+            );
+
             for (name, value) in head.headers.iter() {
                 write!(&mut stdout, "{}: ", name).unwrap();
                 stdout.write(value.as_bytes()).unwrap();

@@ -19,6 +19,7 @@ fn main() {
 fn handler(req: &mut dyn RequestExt) -> io::Result<Response<Body>> {
     Ok(
         Response::builder()
+            .status(202)
             .header(header::CONTENT_TYPE, "text/html")
             .body(Body::from_static(b"<h1>Test</h1>"))
             .unwrap()
