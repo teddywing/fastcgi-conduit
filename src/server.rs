@@ -14,7 +14,7 @@ pub enum Error {
     Io { source: io::Error },
 
     #[snafu(display("Couldn't build request: {}", source))]
-    RequestBuilder { source: request::RequestError },
+    RequestBuilder { source: request::Error },
 
     #[snafu(display("Couldn't parse response: {}", source))]
     ConduitResponse { source: conduit::BoxError },

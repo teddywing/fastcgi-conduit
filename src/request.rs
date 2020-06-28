@@ -8,7 +8,7 @@ use snafu::{ResultExt, Snafu};
 
 
 #[derive(Debug, Snafu)]
-pub enum RequestError {
+pub enum Error {
     #[snafu(display("{}", source))]
     InvalidMethod { source: http::method::InvalidMethod },
 
@@ -22,7 +22,7 @@ pub enum RequestError {
     InvalidRemoteAddr { source: RemoteAddrError },
 }
 
-pub type RequestResult<T, E = RequestError> = std::result::Result<T, E>;
+pub type RequestResult<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, Snafu)]
 pub enum RemoteAddrError {
