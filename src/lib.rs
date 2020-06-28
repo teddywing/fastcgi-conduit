@@ -56,6 +56,7 @@ struct FastCgiRequest<'a> {
     query: Option<String>,
     remote_addr: SocketAddr,
     content_length: Option<u64>,
+    extensions: conduit::Extensions,
 }
 
 impl<'a> FastCgiRequest<'a> {
@@ -75,6 +76,7 @@ impl<'a> FastCgiRequest<'a> {
             query: Self::query(&request),
             remote_addr: Self::remote_addr(&request).context(InvalidRemoteAddr)?,
             content_length: Self::content_length(&request),
+            extensions: conduit::TypeMap::new(),
         };
 
         Ok(r)
@@ -218,8 +220,14 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
    }
 
    fn body(&mut self) -> &mut (dyn std::io::Read) { todo!() }
-   fn extensions(&self) -> &conduit::TypeMap { todo!() }
-   fn mut_extensions(&mut self) -> &mut conduit::TypeMap { todo!() }
+
+   fn extensions(&self) -> &conduit::Extensions {
+       &self.extensions
+   }
+
+   fn mut_extensions(&mut self) -> &mut conduit::Extensions {
+       &mut self.extensions
+   }
 }
 
 
