@@ -70,7 +70,7 @@ impl<'a> FastCgiRequest<'a> {
         let remote_addr = Self::remote_addr(request).context(InvalidRemoteAddr)?;
         let content_length = Self::content_length(request);
 
-        let r = Self {
+        Ok(Self {
             request: request,
             http_version: version,
             host: host,
@@ -81,9 +81,7 @@ impl<'a> FastCgiRequest<'a> {
             remote_addr: remote_addr,
             content_length: content_length,
             extensions: conduit::TypeMap::new(),
-        };
-
-        Ok(r)
+        })
     }
 
     pub fn scheme(&self) -> conduit::Scheme {
