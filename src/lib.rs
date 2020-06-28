@@ -3,7 +3,7 @@ extern crate fastcgi;
 extern crate http;
 
 use std::io;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, Read, Write};
 use std::net::SocketAddr;
 
 use conduit::Handler;
@@ -47,7 +47,7 @@ pub enum RemoteAddrError {
 
 
 struct FastCgiRequest<'a> {
-    request: &'a fastcgi::Request,
+    request: &'a mut fastcgi::Request,
     http_version: conduit::Version,
     host: String,
     method: conduit::Method,
@@ -60,22 +60,26 @@ struct FastCgiRequest<'a> {
 }
 
 impl<'a> FastCgiRequest<'a> {
-    pub fn new(request: &'a fastcgi::Request) -> RequestResult<Self> {
-        let method = Self::method(request)
-            .context(InvalidMethod)?;
-
+    pub fn new(request: &'a mut fastcgi::Request) -> RequestResult<Self> {
+        let version = Self::version(request);
+        let host = Self::host(request);
+        let method = Self::method(request).context(InvalidMethod)?;
         let headers = Self::headers(request.params())?;
+        let path = Self::path(request);
+        let query = Self::query(request);
+        let remote_addr = Self::remote_addr(request).context(InvalidRemoteAddr)?;
+        let content_length = Self::content_length(request);
 
         let r = Self {
             request: request,
-            http_version: Self::version(&request),
-            host: Self::host(&request),
+            http_version: version,
+            host: host,
             method: method,
             headers: headers,
-            path: Self::path(&request),
-            query: Self::query(&request),
-            remote_addr: Self::remote_addr(&request).context(InvalidRemoteAddr)?,
-            content_length: Self::content_length(&request),
+            path: path,
+            query: query,
+            remote_addr: remote_addr,
+            content_length: content_length,
             extensions: conduit::TypeMap::new(),
         };
 
@@ -92,11 +96,11 @@ impl<'a> FastCgiRequest<'a> {
         }
     }
 
-    fn host(request: &'a fastcgi::Request) -> String {
+    fn host(request: &fastcgi::Request) -> String {
         request.param("HTTP_HOST").unwrap_or_default()
     }
 
-    fn version(request: &'a fastcgi::Request) -> conduit::Version {
+    fn version(request: &fastcgi::Request) -> conduit::Version {
         match request.param("SERVER_PROTOCOL").unwrap_or_default().as_str() {
             "HTTP/0.9" => conduit::Version::HTTP_09,
             "HTTP/1.0" => conduit::Version::HTTP_10,
@@ -108,7 +112,7 @@ impl<'a> FastCgiRequest<'a> {
     }
 
     fn method(
-        request: &'a fastcgi::Request
+        request: &fastcgi::Request
     ) -> Result<conduit::Method, http::method::InvalidMethod> {
         conduit::Method::from_bytes(
             request.param("REQUEST_METHOD")
@@ -149,18 +153,18 @@ impl<'a> FastCgiRequest<'a> {
             .collect()
     }
 
-    fn path(request: &'a fastcgi::Request) -> String {
+    fn path(request: &fastcgi::Request) -> String {
         match request.param("SCRIPT_NAME") {
             Some(p) => p,
             None => "/".to_owned(),
         }
     }
 
-    fn query(request: &'a fastcgi::Request) -> Option<String> {
+    fn query(request: &fastcgi::Request) -> Option<String> {
         request.param("QUERY_STRING")
     }
 
-    fn remote_addr(request: &'a fastcgi::Request) -> Result<SocketAddr, RemoteAddrError> {
+    fn remote_addr(request: &fastcgi::Request) -> Result<SocketAddr, RemoteAddrError> {
         let addr = request.param("REMOTE_ADDR").unwrap_or_default();
         let port = request.param("REMOTE_PORT").unwrap_or_default();
 
@@ -172,8 +176,14 @@ impl<'a> FastCgiRequest<'a> {
         )
     }
 
-    fn content_length(request: &'a fastcgi::Request) -> Option<u64> {
+    fn content_length(request: &fastcgi::Request) -> Option<u64> {
         request.param("CONTENT_LENGTH").and_then(|l| l.parse().ok())
+    }
+}
+
+impl<'a> Read for FastCgiRequest<'a> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.request.stdin().read(buf)
     }
 }
 
@@ -219,7 +229,9 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        &self.headers
    }
 
-   fn body(&mut self) -> &mut (dyn std::io::Read) { todo!() }
+   fn body(&mut self) -> &mut (dyn std::io::Read) {
+       self
+   }
 
    fn extensions(&self) -> &conduit::Extensions {
        &self.extensions
