@@ -1,27 +1,26 @@
+extern crate conduit;
 extern crate http;
+extern crate fastcgi_conduit;
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::io;
 
-use http::{Response, StatusCode};
+use conduit::{Body, RequestExt, Response};
+use conduit::header;
 
-use fcgi;
+use fastcgi_conduit::Server;
 
 
 fn main() {
-    fcgi::run(move |req| {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open("/tmp/fcgi-log.txt")
-            .unwrap();
-        write!(file, "» {:?}\n", req).unwrap();
+    Server::start(handler);
+}
 
-        let resp = Response::builder()
-            .status(StatusCode::OK)
-            .body(())
-            .unwrap();
-
-        return resp;
-    });
+fn handler(req: &mut dyn RequestExt) -> io::Result<Response<Body>> {
+    Ok(
+        Response::builder()
+            .header(header::CONTENT_TYPE, "text/html")
+            .body(Body::from_static(b"<h1>Test</h1>"))
+            .unwrap()
+    )
 }
