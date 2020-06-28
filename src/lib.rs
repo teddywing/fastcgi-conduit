@@ -271,7 +271,7 @@ impl Server {
             match body {
                 conduit::Body::Static(slice) => stdout.write(slice).map(|_| ()).unwrap(),
                 conduit::Body::Owned(vec) => stdout.write(&vec).map(|_| ()).unwrap(),
-                conduit::Body::File(file) => (),
+                conduit::Body::File(mut file) => io::copy(&mut file, &mut stdout).map(|_| ()).unwrap(),
             };
         });
 
