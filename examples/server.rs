@@ -1,27 +1,41 @@
+extern crate conduit;
+extern crate conduit_router;
 extern crate http;
+extern crate fastcgi_conduit;
 
 use std::fs::OpenOptions;
 use std::io::prelude::*;
+use std::io;
 
-use http::{Response, StatusCode};
+use conduit::{Body, HttpResult, RequestExt, Response};
+use conduit::header;
+use conduit_router::{RequestParams, RouteBuilder};
 
-use fcgi;
+use fastcgi_conduit::Server;
 
 
 fn main() {
-    fcgi::run(move |req| {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open("/tmp/fcgi-log.txt")
-            .unwrap();
-        write!(file, "» {:?}\n", req).unwrap();
+    let mut router = RouteBuilder::new();
 
-        let resp = Response::builder()
-            .status(StatusCode::OK)
-            .body(())
-            .unwrap();
+    router.get("/", handler);
+    router.get("/:var", var_handler);
 
-        return resp;
-    });
+    Server::start(router);
+}
+
+fn handler(req: &mut dyn RequestExt) -> io::Result<Response<Body>> {
+    Ok(
+        Response::builder()
+            .status(202)
+            .header(header::CONTENT_TYPE, "text/html")
+            .body(Body::from_static(b"<h1>Test</h1>"))
+            .unwrap()
+    )
+}
+
+fn var_handler(req: &mut dyn RequestExt) -> HttpResult {
+    let var = req.params().find("var").unwrap();
+    let text = format!("The value is: {}", var).into_bytes();
+
+    Response::builder().body(Body::from_vec(text))
 }
