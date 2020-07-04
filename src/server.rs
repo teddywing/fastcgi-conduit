@@ -8,6 +8,9 @@ use snafu::{ResultExt, Snafu};
 use crate::request;
 
 
+const HTTP_VERSION: &'static str = "HTTP/1.1";
+
+
 #[derive(Debug, Snafu)]
 pub enum Error {
     #[snafu(display("{}", source))]
@@ -26,7 +29,19 @@ pub struct Server;
 impl Server {
     pub fn start<H: Handler + 'static + Sync>(handler: H) -> io::Result<Server> {
         fastcgi::run(move |mut raw_request| {
-            handle_request(&mut raw_request, &handler);
+            match handle_request(&mut raw_request, &handler) {
+                Ok(_) => (),
+
+                // TODO: log
+                // Ignore write errors as clients will have closed the
+                // connection by this point.
+                Err(Error::Io { .. }) => (),
+
+                Err(Error::RequestBuilder { .. }) =>
+                    internal_server_error(&mut raw_request.stdout()),
+                Err(Error::ConduitResponse { .. }) =>
+                    internal_server_error(&mut raw_request.stdout()),
+            }
         });
 
         Ok(Server{})
@@ -51,7 +66,8 @@ where H: Handler + 'static + Sync
 
     write!(
         &mut stdout,
-        "HTTP/1.1 {} {}\r\n",
+        "{} {} {}\r\n",
+        HTTP_VERSION,
         head.status.as_str(),
         head.status.canonical_reason().unwrap_or("UNKNOWN"),
     )
@@ -72,4 +88,18 @@ where H: Handler + 'static + Sync
     };
 
     Ok(())
+}
+
+fn internal_server_error<W: Write>(mut w: W) {
+    let code = conduit::StatusCode::INTERNAL_SERVER_ERROR;
+
+    write!(
+        w,
+        "{} {} {}\r\n{}\r\n\r\n",
+        HTTP_VERSION,
+        code,
+        code.canonical_reason().unwrap_or_default(),
+        "Content-Length: 0",
+    )
+        .unwrap_or(())
 }
