@@ -3,6 +3,8 @@ use std::io::Write;
 
 use conduit::Handler;
 
+use log::error;
+
 use snafu::{ResultExt, Snafu};
 
 use crate::request;
@@ -31,16 +33,22 @@ impl Server {
         fastcgi::run(move |mut raw_request| {
             match handle_request(&mut raw_request, &handler) {
                 Ok(_) => (),
+                Err(e) => match e {
+                    // Ignore write errors as clients will have closed the
+                    // connection by this point.
+                    Error::Write { .. } => error!("Write error: {}", e),
 
-                // TODO: log
-                // Ignore write errors as clients will have closed the
-                // connection by this point.
-                Err(Error::Write { .. }) => (),
+                    Error::RequestBuilder { .. } => {
+                        error!("Unable to build request: {}", e);
 
-                Err(Error::RequestBuilder { .. }) =>
-                    internal_server_error(&mut raw_request.stdout()),
-                Err(Error::ConduitResponse { .. }) =>
-                    internal_server_error(&mut raw_request.stdout()),
+                        internal_server_error(&mut raw_request.stdout())
+                    },
+                    Error::ConduitResponse { .. } => {
+                        error!("Error getting response: {}", e);
+
+                        internal_server_error(&mut raw_request.stdout())
+                    },
+                }
             }
         });
 
@@ -95,13 +103,15 @@ where H: Handler + 'static + Sync
 fn internal_server_error<W: Write>(mut w: W) {
     let code = conduit::StatusCode::INTERNAL_SERVER_ERROR;
 
-    write!(
+    match write!(
         w,
         "{} {} {}\r\n{}\r\n\r\n",
         HTTP_VERSION,
         code,
         code.canonical_reason().unwrap_or_default(),
         "Content-Length: 0",
-    )
-        .unwrap_or(())
+    ) {
+        Ok(_) => (),
+        Err(e) => error!("Write error: {}", e),
+    }
 }
