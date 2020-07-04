@@ -3,8 +3,6 @@ extern crate conduit_router;
 extern crate http;
 extern crate fastcgi_conduit;
 
-use std::fs::OpenOptions;
-use std::io::prelude::*;
 use std::io;
 
 use conduit::{Body, HttpResult, RequestExt, Response};
@@ -23,7 +21,7 @@ fn main() {
     Server::start(router);
 }
 
-fn handler(req: &mut dyn RequestExt) -> io::Result<Response<Body>> {
+fn handler(_req: &mut dyn RequestExt) -> io::Result<Response<Body>> {
     Ok(
         Response::builder()
             .status(202)
