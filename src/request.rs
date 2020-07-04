@@ -7,31 +7,40 @@ use inflector::cases::traincase::to_train_case;
 use snafu::{ResultExt, Snafu};
 
 
+/// Errors parsing a FastCGI request.
 #[derive(Debug, Snafu)]
 pub enum Error {
+    /// The HTTP method is invalid.
     #[snafu(display("{}", source))]
     InvalidMethod { source: http::method::InvalidMethod },
 
+    /// An invalid HTTP header name.
     #[snafu(display("{}", source))]
     InvalidHeaderName { source: conduit::header::InvalidHeaderName },
 
+    /// An invalid HTTP header value.
     #[snafu(display("{}", source))]
     InvalidHeaderValue { source: conduit::header::InvalidHeaderValue },
 
+    /// An invalid remote address.
     #[snafu(display("{}", source))]
     InvalidRemoteAddr { source: RemoteAddrError },
 }
 
+/// A convenience `Result` that contains a request `Error`.
 pub type RequestResult<T, E = Error> = std::result::Result<T, E>;
 
+/// Errors parsing an HTTP remote address.
 #[derive(Debug, Snafu)]
 pub enum RemoteAddrError {
+    /// Error parsing the address part.
     #[snafu(display("Could not parse address {}: {}", address, source))]
     AddrParseError {
         address: String,
         source: std::net::AddrParseError,
     },
 
+    /// Error parsing the port part.
     #[snafu(display("Could not parse port {}: {}", port, source))]
     PortParseError {
         port: String,
@@ -40,6 +49,11 @@ pub enum RemoteAddrError {
 }
 
 
+/// Wraps a [`fastcgi::Request`][fastcgi::Request] to implement
+/// [`conduit::RequestExt`][conduit::RequestExt].
+///
+/// [fastcgi::Request]: ../../fastcgi/struct.Request.html
+/// [conduit::RequestExt]: ../../conduit/trait.RequestExt.html
 pub struct FastCgiRequest<'a> {
     request: &'a mut fastcgi::Request,
     http_version: conduit::Version,
@@ -54,6 +68,7 @@ pub struct FastCgiRequest<'a> {
 }
 
 impl<'a> FastCgiRequest<'a> {
+    /// Create a new `FastCgiRequest`.
     pub fn new(request: &'a mut fastcgi::Request) -> RequestResult<Self> {
         let version = Self::version(request);
         let host = Self::host(request);
@@ -78,6 +93,7 @@ impl<'a> FastCgiRequest<'a> {
         })
     }
 
+    /// Extract the HTTP version.
     fn version(request: &fastcgi::Request) -> conduit::Version {
         match request.param("SERVER_PROTOCOL").unwrap_or_default().as_str() {
             "HTTP/0.9" => conduit::Version::HTTP_09,
@@ -89,6 +105,7 @@ impl<'a> FastCgiRequest<'a> {
         }
     }
 
+    /// Get the request scheme (HTTP or HTTPS).
     fn scheme(&self) -> conduit::Scheme {
         let scheme = self.request.param("REQUEST_SCHEME").unwrap_or_default();
 
@@ -99,10 +116,14 @@ impl<'a> FastCgiRequest<'a> {
         }
     }
 
+    /// Get the HTTP host.
+    ///
+    /// This looks like `localhost:8000`.
     fn host(request: &fastcgi::Request) -> String {
         request.param("HTTP_HOST").unwrap_or_default()
     }
 
+    /// Get the HTTP method (GET, HEAD, POST, etc.).
     fn method(
         request: &fastcgi::Request
     ) -> Result<conduit::Method, http::method::InvalidMethod> {
@@ -113,6 +134,7 @@ impl<'a> FastCgiRequest<'a> {
         )
     }
 
+    /// Build a map of request headers.
     fn headers(params: fastcgi::Params) -> RequestResult<conduit::HeaderMap> {
         let mut map = conduit::HeaderMap::new();
         let headers = Self::headers_from_params(params);
@@ -132,6 +154,8 @@ impl<'a> FastCgiRequest<'a> {
         Ok(map)
     }
 
+    /// Extract headers from request params. Transform these into pairs of
+    /// canonical header names and values.
     fn headers_from_params(params: fastcgi::Params) -> Vec<(String, String)> {
         return params
             .filter(|(key, _)| key.starts_with("HTTP_"))
@@ -145,6 +169,10 @@ impl<'a> FastCgiRequest<'a> {
             .collect()
     }
 
+    /// Get the URI path.
+    ///
+    /// Returns `/path` when the URI is `http://localhost:8000/path?s=query`.
+    /// When the path is empty, returns `/`.
     fn path(request: &fastcgi::Request) -> String {
         match request.param("SCRIPT_NAME") {
             Some(p) => p,
@@ -152,10 +180,15 @@ impl<'a> FastCgiRequest<'a> {
         }
     }
 
+    /// Get the URI query string.
+    ///
+    /// Returns `s=query&lang=en` when the URI is
+    /// `http://localhost:8000/path?s=query&lang=en`.
     fn query(request: &fastcgi::Request) -> Option<String> {
         request.param("QUERY_STRING")
     }
 
+    /// Get the remote address of the request.
     fn remote_addr(request: &fastcgi::Request) -> Result<SocketAddr, RemoteAddrError> {
         let addr = request.param("REMOTE_ADDR").unwrap_or_default();
         let port = request.param("REMOTE_PORT").unwrap_or_default();
@@ -168,12 +201,16 @@ impl<'a> FastCgiRequest<'a> {
         )
     }
 
+    /// Get the request's content length.
     fn content_length(request: &fastcgi::Request) -> Option<u64> {
         request.param("CONTENT_LENGTH").and_then(|l| l.parse().ok())
     }
 }
 
 impl<'a> Read for FastCgiRequest<'a> {
+    /// Read from the underlying FastCGI request's [`Stdin`][Stdin]
+    ///
+    /// [Stdin]: ../../fastcgi/struct.Stdin.html
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.request.stdin().read(buf)
     }
