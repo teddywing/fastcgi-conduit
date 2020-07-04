@@ -1,6 +1,6 @@
 [package]
 name = "fastcgi-conduit"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2018"
 
 [dependencies]
