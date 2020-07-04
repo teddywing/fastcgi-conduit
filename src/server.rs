@@ -81,9 +81,12 @@ where H: Handler + 'static + Sync
     stdout.write(b"\r\n")?;
 
     match body {
-        conduit::Body::Static(slice) => stdout.write(slice).map(|_| ())?,
-        conduit::Body::Owned(vec) => stdout.write(&vec).map(|_| ())?,
-        conduit::Body::File(mut file) => io::copy(&mut file, &mut stdout).map(|_| ())?,
+        conduit::Body::Static(slice) =>
+            stdout.write(slice).map(|_| ())?,
+        conduit::Body::Owned(vec) =>
+            stdout.write(&vec).map(|_| ())?,
+        conduit::Body::File(mut file) =>
+            io::copy(&mut file, &mut stdout).map(|_| ())?,
     };
 
     Ok(())
