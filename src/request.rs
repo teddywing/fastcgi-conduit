@@ -11,19 +11,19 @@ use snafu::{ResultExt, Snafu};
 #[derive(Debug, Snafu)]
 pub enum Error {
     /// The HTTP method is invalid.
-    #[snafu(display("{}", source))]
+    #[snafu(context(false))]
     InvalidMethod { source: http::method::InvalidMethod },
 
     /// An invalid HTTP header name.
-    #[snafu(display("{}", source))]
+    #[snafu(context(false))]
     InvalidHeaderName { source: conduit::header::InvalidHeaderName },
 
     /// An invalid HTTP header value.
-    #[snafu(display("{}", source))]
+    #[snafu(context(false))]
     InvalidHeaderValue { source: conduit::header::InvalidHeaderValue },
 
     /// An invalid remote address.
-    #[snafu(display("{}", source))]
+    #[snafu(context(false))]
     InvalidRemoteAddr { source: RemoteAddrError },
 }
 
@@ -72,11 +72,11 @@ impl<'a> FastCgiRequest<'a> {
     pub fn new(request: &'a mut fastcgi::Request) -> RequestResult<Self> {
         let version = Self::version(request);
         let host = Self::host(request);
-        let method = Self::method(request).context(InvalidMethod)?;
+        let method = Self::method(request)?;
         let headers = Self::headers(request.params())?;
         let path = Self::path(request);
         let query = Self::query(request);
-        let remote_addr = Self::remote_addr(request).context(InvalidRemoteAddr)?;
+        let remote_addr = Self::remote_addr(request)?;
         let content_length = Self::content_length(request);
 
         Ok(Self {
@@ -144,10 +144,8 @@ impl<'a> FastCgiRequest<'a> {
             .map(|(name, value)| (name.as_bytes(), value.as_bytes()))
         {
             map.append(
-                conduit::header::HeaderName::from_bytes(name)
-                    .context(InvalidHeaderName)?,
-                conduit::header::HeaderValue::from_bytes(value)
-                    .context(InvalidHeaderValue)?,
+                conduit::header::HeaderName::from_bytes(name)?,
+                conduit::header::HeaderValue::from_bytes(value)?,
             );
         }
 
