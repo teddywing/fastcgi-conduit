@@ -103,15 +103,13 @@ where H: Handler + 'static + Sync
 fn internal_server_error<W: Write>(mut w: W) {
     let code = conduit::StatusCode::INTERNAL_SERVER_ERROR;
 
-    match write!(
+    write!(
         w,
         "{} {} {}\r\n{}\r\n\r\n",
         HTTP_VERSION,
         code,
         code.canonical_reason().unwrap_or_default(),
         "Content-Length: 0",
-    ) {
-        Ok(_) => (),
-        Err(e) => error!("Write error: {}", e),
-    }
+    )
+        .unwrap_or_else(|e| error!("Write error: {}", e))
 }
