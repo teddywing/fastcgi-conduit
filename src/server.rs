@@ -13,8 +13,8 @@ const HTTP_VERSION: &'static str = "HTTP/1.1";
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("{}", source))]
-    WriteError { source: io::Error },
+    #[snafu(context(false))]
+    Write { source: io::Error },
 
     #[snafu(display("Couldn't build request: {}", source))]
     RequestBuilder { source: request::Error },
@@ -35,7 +35,7 @@ impl Server {
                 // TODO: log
                 // Ignore write errors as clients will have closed the
                 // connection by this point.
-                Err(Error::WriteError { .. }) => (),
+                Err(Error::Write { .. }) => (),
 
                 Err(Error::RequestBuilder { .. }) =>
                     internal_server_error(&mut raw_request.stdout()),
@@ -70,21 +70,20 @@ where H: Handler + 'static + Sync
         HTTP_VERSION,
         head.status.as_str(),
         head.status.canonical_reason().unwrap_or("UNKNOWN"),
-    )
-        .context(WriteError)?;
+    )?;
 
     for (name, value) in head.headers.iter() {
-        write!(&mut stdout, "{}: ", name).context(WriteError)?;
-        stdout.write(value.as_bytes()).context(WriteError)?;
-        stdout.write(b"\r\n").context(WriteError)?;
+        write!(&mut stdout, "{}: ", name)?;
+        stdout.write(value.as_bytes())?;
+        stdout.write(b"\r\n")?;
     }
 
-    stdout.write(b"\r\n").context(WriteError)?;
+    stdout.write(b"\r\n")?;
 
     match body {
-        conduit::Body::Static(slice) => stdout.write(slice).map(|_| ()).context(WriteError)?,
-        conduit::Body::Owned(vec) => stdout.write(&vec).map(|_| ()).context(WriteError)?,
-        conduit::Body::File(mut file) => io::copy(&mut file, &mut stdout).map(|_| ()).context(WriteError)?,
+        conduit::Body::Static(slice) => stdout.write(slice).map(|_| ())?,
+        conduit::Body::Owned(vec) => stdout.write(&vec).map(|_| ())?,
+        conduit::Body::File(mut file) => io::copy(&mut file, &mut stdout).map(|_| ())?,
     };
 
     Ok(())
