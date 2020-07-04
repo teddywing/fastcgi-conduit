@@ -45,7 +45,7 @@ impl Server {
     /// requests and handle them using `handler`.
     ///
     /// [fastcgi::run]: ../../fastcgi/fn.run.html
-    pub fn start<H: Handler + 'static + Sync>(handler: H) -> io::Result<Server> {
+    pub fn start<H: Handler + 'static + Sync>(handler: H) -> Server {
         fastcgi::run(move |mut raw_request| {
             match handle_request(&mut raw_request, &handler) {
                 Ok(_) => (),
@@ -68,7 +68,7 @@ impl Server {
             }
         });
 
-        Ok(Server{})
+        Server{}
     }
 }
 

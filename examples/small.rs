@@ -3,7 +3,7 @@ use fastcgi_conduit::Server;
 
 
 fn main() {
-    Server::start(handler).unwrap();
+    Server::start(handler);
 }
 
 fn handler(_req: &mut dyn RequestExt) -> std::io::Result<Response<Body>> {
