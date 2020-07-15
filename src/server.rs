@@ -27,10 +27,6 @@ use snafu::{ResultExt, Snafu};
 use crate::request;
 
 
-/// The HTTP version used by the server.
-const HTTP_VERSION: &'static str = "HTTP/1.1";
-
-
 /// Wraps server errors.
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -109,8 +105,7 @@ where H: Handler + 'static + Sync
 
     write!(
         &mut stdout,
-        "{} {} {}\r\n",
-        HTTP_VERSION,
+        "Status: {} {}\r\n",
         head.status.as_str(),
         head.status.canonical_reason().unwrap_or("UNKNOWN"),
     )?;
@@ -141,8 +136,7 @@ fn internal_server_error<W: Write>(mut w: W) {
 
     write!(
         w,
-        "{} {} {}\r\n{}\r\n\r\n",
-        HTTP_VERSION,
+        "Status: {} {}\r\n{}\r\n\r\n",
         code,
         code.canonical_reason().unwrap_or_default(),
         "Content-Length: 0",
