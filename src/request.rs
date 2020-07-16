@@ -256,6 +256,10 @@ impl<'a> conduit::RequestExt for FastCgiRequest<'a> {
        &self.path
    }
 
+   fn path_mut(&mut self) -> &mut String {
+       &mut self.path
+   }
+
    fn query_string(&self) -> std::option::Option<&str> {
        self.query.as_ref()
            .map(|p| p.as_str())

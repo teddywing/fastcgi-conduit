@@ -4,7 +4,7 @@ version = "0.1.1"
 edition = "2018"
 
 [dependencies]
-conduit = "0.9.0-alpha.2"
+conduit = "0.9.0-alpha.3"
 fastcgi = "1.0.0"
 http = "0.2.1"
 Inflector = "0.11.4"
@@ -12,4 +12,4 @@ log = "0.4.8"
 snafu = "0.6.8"
 
 [dev-dependencies]
-conduit-router = "0.9.0-alpha.2"
+conduit-router = "0.9.0-alpha.3"
