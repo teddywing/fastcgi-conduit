@@ -1,0 +1,14 @@
+CHANGELOG
+=========
+
+v0.1.1 (2020-07-16):
+	Fixes:
+
+	* Use the correct status code header to fix 500 error on Apache with
+	  mod_fastcgi.
+
+v0.1.0 (2020-07-04):
+	First public release.
+
+
+ vim:tw=80:comments=:fo+=n:formatlistpat=^\\s*\\*\\s*
