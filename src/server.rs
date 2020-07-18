@@ -105,9 +105,8 @@ where H: Handler + 'static + Sync
 
     write!(
         &mut stdout,
-        "Status: {} {}\r\n",
+        "Status: {}\r\n",
         head.status.as_str(),
-        head.status.canonical_reason().unwrap_or("UNKNOWN"),
     )?;
 
     for (name, value) in head.headers.iter() {
@@ -136,9 +135,8 @@ fn internal_server_error<W: Write>(mut w: W) {
 
     write!(
         w,
-        "Status: {} {}\r\n{}\r\n\r\n",
+        "Status: {}\r\n{}\r\n\r\n",
         code,
-        code.canonical_reason().unwrap_or_default(),
         "Content-Length: 0",
     )
         .unwrap_or_else(|e| error!("Write error: {}", e))
