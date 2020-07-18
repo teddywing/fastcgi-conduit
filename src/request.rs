@@ -189,10 +189,14 @@ impl<'a> FastCgiRequest<'a> {
     /// Returns `/path` when the URI is `http://localhost:8000/path?s=query`.
     /// When the path is empty, returns `/`.
     fn path(request: &fastcgi::Request) -> String {
-        match request.param("SCRIPT_NAME") {
-            Some(p) => p,
-            None => "/".to_owned(),
-        }
+        request.param("REQUEST_URI")
+            .as_ref()
+
+            // Remove query string
+            .map(|uri| uri.split('?').next())
+            .flatten()
+            .unwrap_or("/")
+            .to_owned()
     }
 
     /// Get the URI query string.
