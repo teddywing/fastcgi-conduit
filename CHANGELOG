@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+v0.2.1 (2020-07-18):
+	Fixes:
+
+	* Get URI path from `REQUEST_URI` instead of `SCRIPT_NAME`, fixing route
+	  matchers when using a redirect to the FastCGI program.
+	* Remove unnecessary HTTP status names from "Status" header.
+
 v0.2.0 (2020-07-16):
 	Additions:
 
